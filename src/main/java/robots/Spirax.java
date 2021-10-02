@@ -10,87 +10,82 @@ import robocode.*;
 /**
  * Spirax
  */
-public class Spirax extends Robot
+public class Spirax extends AdvancedRobot
 {
-	private double _heading;
-	private double _gunHeading;
-	private double _energy;
-	private Target[] _targets;
-	private int _currentTarget;
-	private boolean _validTarget;
-	private final int MAX_TARGET_ID = 100;
-	
-	private void checkTargets(String name) {
-		// Sets the current target
-		int nextTarget = this.MAX_TARGET_ID;
-		for(int i = 0; i < this._targets.length; i++) {
-			if(this._targets[i].getName().equals(name)) {
-				nextTarget = i;
-			}
-		}
-		if(nextTarget != this.MAX_TARGET_ID) {
-			this._currentTarget = nextTarget;
-			this._validTarget = true;
-		} else {
-			this._currentTarget = this.MAX_TARGET_ID;
-			this._validTarget = false;
-		}
-	}
+    int moveDirection = 1;
+	// Which way to move
+    /**
+     * run:  Tracker's main run function
+     */
+    public void run() 
+	{
+        setAdjustRadarForRobotTurn(true);
+		// keep the radar still while we turn
+        setAdjustGunForRobotTurn(true); 
+		// Keep the gun still when we turn
+        turnRadarRightRadians(Double.POSITIVE_INFINITY);
+		// Keep turning radar right
+    }
 
-	/**
-	 * run: Spirax default behavior
-	 */
-	public void run() {
-		// Initialization of the robot should be put here
+    /**
+     * onScannedRobot:  Here's the good stuff
+     */
+    public void onScannedRobot(ScannedRobotEvent e) 
+	{
+        double absBearing = e.getBearingRadians() + getHeadingRadians();
+		// Enemies absolute bearing
+        double latVel = e.getVelocity() * Math.sin(e.getHeadingRadians() -absBearing);
+		// Enemies later velocity
+        double gunTurnAmt;
+		// Amount to turn our gun
+        setTurnRadarLeftRadians(getRadarTurnRemainingRadians());
+		// Lock on the radar
+        if(Math.random()>.9)
+		{
+            setMaxVelocity((12 * Math.random()) + 12);
+			// randomly change speed
+        }
+        if (e.getDistance() > 150) 
+		{
+			// if distance is greater than 150
+            gunTurnAmt = robocode.util.Utils.normalRelativeAngle(absBearing - getGunHeadingRadians() + latVel/22);
+			// Amount to turn our gun, lead just a little bit
+            setTurnGunRightRadians(gunTurnAmt);
+			// Turn our gun
+            setTurnRightRadians(robocode.util.Utils.normalRelativeAngle(absBearing - getHeadingRadians() + latVel/getVelocity()));
+			// Drive towards the enemies predicted future location
+        }
+        else
+		{
+			// If we are close enough...
+            gunTurnAmt = robocode.util.Utils.normalRelativeAngle(absBearing - getGunHeadingRadians() + latVel/15);
+			// Amount to turn our gun, lead just a little bit
+            setTurnGunRightRadians(gunTurnAmt);
+			// Turn our gun
+            setTurnLeft(-90 - e.getBearing());
+			// Turn perpendicular to the enemy
+        }
+		setAhead((e.getDistance() - 140) * moveDirection);
+		// Move forward
+		setFire(2);
+		// Fire
+    }
 
-		this._gunHeading = getGunHeading();
-		this._heading = getGunHeading();
-		this._energy = getEnergy();
-		while(true) {
-			turnGunRight(1);
-			this._gunHeading = getGunHeading();
-		}
-	}
+    public void onHitWall(HitWallEvent e)
+	{
+        moveDirection =- moveDirection;
+		// reverse direction upon hitting a wall
+    }
 
-	/**
-	 * onScannedRobot: What to do when you see another robot
-	 */
-	public void onScannedRobot(ScannedRobotEvent e) {
-		// Replace the next line with any behavior you would like
-		// Assuming radar and gun are aligned...
-		
-		double enemy = e.getHeading();
-		if(enemy > this._gunHeading) {
-			double turn = enemy - this._gunHeading;
-			turnGunRight(turn);
-		} else if (enemy < this._gunHeading) {
-			double turn = this._gunHeading - enemy;
-			turnGunLeft(turn);
-		}
-		this._gunHeading = getGunHeading();
-		fire(3);
-	}
-
-		/**
-	 * onScannedRobot: What to do when you see another robot
-	 */
-	public void onBulletHit(BulletHitEvent e) {
-		// Replace the next line with any behavior you would like
-		// Assuming radar and gun are aligned...
-		this._gunHeading = getGunHeading();
-	}
-
-	/**
-	 * onHitByBullet: What to do when you're hit by a bullet
-	 */
-	public void onHitByBullet(HitByBulletEvent e) {
-
-	}
-	
-	/**
-	 * onHitWall: What to do when you hit a wall
-	 */
-	public void onHitWall(HitWallEvent e) {
-
-	}	
+    /**
+     * onWin:  Do a victory dance
+     */
+    public void onWin(WinEvent e) 
+	{
+        for (int i = 0; i < 50; i++) 
+		{
+            turnRight(30);
+            turnLeft(30);
+        }
+    }
 }
